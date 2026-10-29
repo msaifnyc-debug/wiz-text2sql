@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Text-to-SQL - Console</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <strong>Text&#8209;to&#8209;SQL</strong>
+    <div class="spacer"></div>
+    <label class="upload">
+      <input id="file" type="file" accept=".db,.sqlite,.sqlite3" hidden />
+      Upload .db
+    </label>
+    <select id="db-select" title="Active database"></select>
+    <button id="logout" class="ghost">Log out</button>
+  </header>
+
+  <main class="console">
+    <section class="ask">
+      <form id="ask-form">
+        <input id="question" type="text" placeholder="e.g. Which 3 genres earned the most revenue?" autocomplete="off" />
+        <button type="submit" class="primary">Ask</button>
+      </form>
+      <p id="status" class="muted"></p>
+
+      <div id="sql-panel" class="panel hidden">
+        <div class="panel-head"><span>Generated SQL</span><span id="sql-badges"></span></div>
+        <pre id="sql"></pre>
+      </div>
+
+      <div id="result-panel" class="panel hidden">
+        <div class="panel-head"><span id="result-title">Results</span><span id="latency" class="muted"></span></div>
+        <div id="result"></div>
+      </div>
+    </section>
+
+    <aside class="history">
+      <h3>Recent questions</h3>
+      <ul id="history-list"></ul>
+    </aside>
+  </main>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

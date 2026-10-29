@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - clusterrolebinding.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  # secret.example.yaml is intentionally NOT included; scripts/deploy-app.sh
+  # creates the real Secret from env vars.
+
+# Placeholder only: scripts/deploy-app.sh swaps in <ecr-url>@<digest> before
+# apply, because Kyverno rejects any non-ECR image in this namespace.
+images:
+  - name: text2sql-app
+    newName: text2sql-app
+    newTag: latest

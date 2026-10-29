@@ -1,0 +1,30 @@
+# PREVENTATIVE control (admission-time, enforce mode).
+# In the app namespace, only images from our own ECR may run. A supply-chain
+# attempt to run an arbitrary public image (e.g. a cryptominer or a backdoored
+# nginx:latest) into text2sql is rejected at admission.
+#
+# The text2sql Deployment is deployed by digest from *.dkr.ecr.*.amazonaws.com,
+# so it is admitted. Scoped to the app namespace so platform add-ons are unaffected.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Allow only ECR images in the app namespace
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: ecr-only-in-text2sql
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["text2sql"]
+      validate:
+        message: "Images in the text2sql namespace must come from the project ECR registry."
+        pattern:
+          spec:
+            containers:
+              - image: "*.dkr.ecr.*.amazonaws.com/*"

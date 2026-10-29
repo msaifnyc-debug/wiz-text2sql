@@ -1,0 +1,39 @@
+# ---- Secrets / env ----
+*.env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*_rsa
+kubeconfig*
+**/secret.yaml
+!**/secret.example.yaml
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.cache/
+
+# ---- Terraform ----
+.terraform/
+# Keep .terraform.lock.hcl committed for reproducible provider versions.
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+
+# ---- Uploaded user databases (runtime) ----
+app/uploads/
+
+# ---- OS / editor ----
+.DS_Store
+.idea/
+.vscode/
+*.swp

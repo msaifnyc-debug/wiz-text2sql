@@ -1,0 +1,9 @@
+# Require review from the repo owner on every change.
+# Branch protection is configured to require Code Owner review before merge.
+*                   @muhammedsaif
+
+# Security-sensitive paths get explicit ownership so changes are never silent.
+/infra/             @muhammedsaif
+/.github/workflows/ @muhammedsaif
+/k8s/               @muhammedsaif
+/security/          @muhammedsaif

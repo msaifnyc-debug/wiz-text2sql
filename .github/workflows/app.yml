@@ -1,0 +1,136 @@
+# App pipeline: test + SAST + secret-scan + build + image-scan + SBOM (every PR),
+# then build -> push to ECR -> deploy to EKS -> prove wizexercise.txt (main only).
+#
+# Enforced gates (fail the required check): unit/security tests, Gitleaks (no
+# secrets), and Trivy CRITICAL (fixable) image vulns. Semgrep is advisory.
+# All third-party actions are pinned to full commit SHAs (tag in comment).
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "k8s/**", "wizexercise.txt", ".github/workflows/app.yml"]
+  pull_request:
+    paths: ["app/**", "k8s/**", "wizexercise.txt", ".github/workflows/app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: text2sql-eks
+  ECR_REPO: text2sql-app
+  LOCAL_IMAGE: text2sql-app:ci
+
+jobs:
+  # Required status check (see .github/branch-protection.json).
+  app-sast-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # full history for secret scanning
+
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Unit + security test matrix (enforced)
+        working-directory: app
+        run: |
+          pip install -r requirements.txt pytest==8.2.0 httpx==0.27.0
+          python -m pytest -q
+
+      - name: Gitleaks secret scan (enforced)
+        uses: gitleaks/gitleaks-action@83373cf2f8c4db6e24b41c1a9b086bb9619e9cd3 # v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Semgrep SAST (advisory)
+        continue-on-error: true
+        run: |
+          pip install semgrep==1.90.0
+          semgrep scan --config p/python --config p/security-audit app/
+
+      - uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build image (local, for scanning)
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: app/Dockerfile
+          load: true
+          push: false
+          tags: ${{ env.LOCAL_IMAGE }}
+
+      - name: Prove wizexercise.txt is baked into the image
+        run: docker run --rm --entrypoint cat "$LOCAL_IMAGE" /app/wizexercise.txt
+
+      - name: Trivy report (HIGH,CRITICAL - visible, non-blocking)
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: ${{ env.LOCAL_IMAGE }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Trivy gate (fixable CRITICAL - enforced)
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          image-ref: ${{ env.LOCAL_IMAGE }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@fc46e51fd3cb168ffb36c6d1915723c47db58abb # v0.17.7
+        with:
+          image: ${{ env.LOCAL_IMAGE }}
+          format: spdx-json
+          artifact-name: sbom.spdx.json
+
+  build-push-deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: app-sast-and-scan
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+      - uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - id: build
+        name: Build and push to ECR
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: app/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:latest
+
+      - name: Deploy to EKS (by immutable digest)
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}@${{ steps.build.outputs.digest }}
+          # Synced into the K8s Secret -> pod env (MONGODB_URI requirement).
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+          APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+        run: |
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
+          scripts/deploy-app.sh "$IMAGE"
+
+      - name: Validate wizexercise.txt in the RUNNING container
+        run: kubectl -n text2sql exec deploy/text2sql -- cat /app/wizexercise.txt

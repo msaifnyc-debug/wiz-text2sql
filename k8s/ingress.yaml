@@ -1,0 +1,24 @@
+# Internet-facing ALB provisioned by the AWS Load Balancer Controller from this
+# Ingress (requirement: exposed via a Kubernetes ingress + CSP load balancer).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: text2sql
+  namespace: text2sql
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: text2sql
+                port:
+                  number: 80

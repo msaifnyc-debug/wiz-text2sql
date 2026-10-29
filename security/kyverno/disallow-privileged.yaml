@@ -1,0 +1,55 @@
+# PREVENTATIVE control (admission-time, enforce mode).
+# Blocks privileged / root / privilege-escalating containers cluster-wide.
+#
+# This does NOT conflict with the exercise's required weaknesses: the text2sql app
+# already runs as non-root with no privilege escalation, so it is admitted. The
+# demo shows Kyverno REJECTING a deliberately bad test pod.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-and-root
+  annotations:
+    policies.kyverno.io/title: Disallow privileged and root containers
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: no-privileged
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      exclude:
+        any:
+          - resources:
+              namespaces: ["kube-system", "kyverno", "kube-node-lease", "kube-public"]
+      validate:
+        message: "Privileged containers are not allowed."
+        pattern:
+          spec:
+            =(ephemeralContainers):
+              - =(securityContext):
+                  =(privileged): "false"
+            =(initContainers):
+              - =(securityContext):
+                  =(privileged): "false"
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"
+    - name: require-non-root-and-no-privesc
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      exclude:
+        any:
+          - resources:
+              namespaces: ["kube-system", "kyverno", "kube-node-lease", "kube-public"]
+      validate:
+        message: "Containers must run as non-root and disable privilege escalation."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: "false"

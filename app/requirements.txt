@@ -1,0 +1,17 @@
+# Pinned for reproducible image builds and so Dependabot/SCA can track them.
+# web
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.1
+email-validator==2.1.1
+python-multipart==0.0.9
+python-jose[cryptography]==3.3.0
+bcrypt==4.1.3
+jinja2==3.1.4
+pymongo==4.7.2
+# agent (reused from the take-home)
+openai==1.30.1
+sqlglot==30.11.0
+python-dotenv==1.0.1
+pandas==2.2.2
+rich==13.7.1

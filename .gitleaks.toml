@@ -1,0 +1,22 @@
+# Gitleaks config: extend the default ruleset, allowlisting known non-secrets so
+# the enforced secret-scan gate stays signal, not noise.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Templates, placeholders, and public OIDC thumbprints"
+paths = [
+  '''.*\.example$''',
+  '''.*\.example\..*''',
+  '''k8s/secret\.example\.yaml''',
+  '''app/\.env\.example''',
+  '''data/.*\.db$''',
+  # Downloaded TF module cache (git-ignored); its upstream examples carry sample
+  # key material that would otherwise trip a local `gitleaks --no-git` scan.
+  '''(^|/)\.terraform/.*''',
+]
+# GitHub Actions OIDC CA thumbprints are public, not secrets.
+regexes = [
+  '''6938fd4d98bab03faadb97b34396831e3780aea1''',
+  '''1c58a3a8518e8759bf075b76b750d4f2df264fcd''',
+]

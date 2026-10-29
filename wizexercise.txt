@@ -1,0 +1,5 @@
+Muhammed Saif
+Wiz Technical Exercise - Text-to-SQL on AWS
+This file is baked into the container image to prove image provenance.
+Validate in the running pod with:
+  kubectl exec deploy/text2sql -n text2sql -- cat /app/wizexercise.txt

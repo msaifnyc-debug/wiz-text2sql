@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Text-to-SQL - Sign in</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="centered">
+  <main class="card">
+    <h1>Text&#8209;to&#8209;SQL</h1>
+    <p class="muted">Upload a database. Ask in plain English. Get SQL + results.</p>
+
+    <div class="tabs">
+      <button id="tab-login" class="tab active">Log in</button>
+      <button id="tab-signup" class="tab">Sign up</button>
+    </div>
+
+    <form id="login-form" class="form">
+      <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
+      <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+      <button type="submit" class="primary">Log in</button>
+    </form>
+
+    <form id="signup-form" class="form hidden">
+      <input id="signup-username" type="text" placeholder="Name" required />
+      <input id="signup-email" type="email" placeholder="Email" autocomplete="username" required />
+      <input id="signup-password" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" minlength="8" required />
+      <button type="submit" class="primary">Create account</button>
+    </form>
+
+    <p id="error" class="error"></p>
+  </main>
+  <script src="/static/js/login.js"></script>
+</body>
+</html>
