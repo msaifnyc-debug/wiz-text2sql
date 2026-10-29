@@ -11,7 +11,7 @@ trust boundaries, and the attack-path graph.
 | Layer | Component | Where | Notable config | Intentional? |
 |---|---|---|---|---|
 | Edge | Internet-facing ALB | Public subnets | Provisioned from the Ingress by the AWS LB Controller | no |
-| Compute | EKS cluster `text2sql-eks` | Private subnets | k8s 1.29, managed node group (t3.medium x2), public API endpoint, all 5 control-plane log types on | no |
+| Compute | EKS cluster `text2sql-eks` | Private subnets | k8s 1.33, managed node group (t3.medium x2), public API endpoint, all 5 control-plane log types on | no |
 | App | `text2sql` pod | EKS | Non-root, read-only rootfs, caps dropped — but SA is **cluster-admin** | SA binding **yes** |
 | Data (app) | MongoDB 5.0 | EC2 VM (public subnet) | Auth on; `bindIp 0.0.0.0`; reachable on 27017 only from the EKS node SG | version EOL **yes** |
 | Data (analytics) | Uploaded SQLite `.db` | Pod `emptyDir` | Opened read-only, `query_only`, extensions off, wall-clock timeout | hardened (no) |

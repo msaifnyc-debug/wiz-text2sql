@@ -3,7 +3,7 @@ region  = "us-east-1"
 project = "text2sql"
 
 # EKS
-cluster_version    = "1.29"
+cluster_version    = "1.33"  # use any EKS-supported version; 1.29 is EOL/not creatable
 node_instance_type = "t3.medium"
 
 # GitHub Actions OIDC trust (for the pipelines). Set to your repo.
