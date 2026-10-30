@@ -69,7 +69,11 @@ jobs:
         run: docker run --rm --entrypoint cat "$LOCAL_IMAGE" /app/wizexercise.txt
 
       - name: Trivy report (HIGH,CRITICAL - visible, non-blocking)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        # Without this the step is only *called* non-blocking: an action-level
+        # failure (e.g. the Trivy installer erroring) still fails the job even
+        # though exit-code is 0. The enforced gate is the next step.
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.LOCAL_IMAGE }}
           format: table
@@ -77,7 +81,7 @@ jobs:
           exit-code: "0"
 
       - name: Trivy gate (fixable CRITICAL - enforced)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.LOCAL_IMAGE }}
           format: table
@@ -93,7 +97,9 @@ jobs:
           artifact-name: sbom.spdx.json
 
   build-push-deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # workflow_dispatch is included so the app can be redeployed on demand
+    # (e.g. during the live demo) without an empty commit to main.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: app-sast-and-scan
     runs-on: ubuntu-latest
     environment: production
