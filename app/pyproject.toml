@@ -23,7 +23,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==8.2.0", "httpx==0.27.0"]
+# httpx is pinned in requirements.txt (runtime); do not re-pin it here or the
+# two conflict at install time. The tests do not use httpx/TestClient.
+dev = ["pytest==8.2.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
