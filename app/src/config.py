@@ -20,14 +20,18 @@ FIREWORKS_BASE_URL = os.getenv(
 )
 FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")
 
-# Primary model: strong + cheap + fast MoE, great all-rounder for grounded SQL.
-# Swap to qwen2p5-coder-32b-instruct (a coder model) if a quality benchmark favors it.
-# Fast model doubles as the cheap latency tier and the failover target.
+# Primary model: cheapest reliable serverless tier on this account that still
+# produces correct grounded SQL. Verified live (Oct 2026): glm-5p3-flash returned
+# a clean JSON SELECT in ~0.8s using the fewest tokens of the cheap "flash" models,
+# minimizing cost per query for this input-heavy / short-output workload.
+# Failover is a different cheap family (deepseek flash, also verified) so the
+# fallback ladder actually switches models on an error instead of retrying one.
+# Upgrade PRIMARY to gpt-oss-120b (also available, stronger) if accuracy slips.
 PRIMARY_MODEL = os.getenv(
-    "FIREWORKS_MODEL", "accounts/fireworks/models/gpt-oss-120b"
+    "FIREWORKS_MODEL", "accounts/fireworks/models/glm-5p3-flash"
 )
 FAST_MODEL = os.getenv(
-    "FIREWORKS_FAST_MODEL", "accounts/fireworks/models/gpt-oss-20b"
+    "FIREWORKS_FAST_MODEL", "accounts/fireworks/models/deepseek-v4p1-flash"
 )
 
 DB_PATH = os.getenv("DB_PATH", "data/Chinook.db")
