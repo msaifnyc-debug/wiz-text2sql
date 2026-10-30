@@ -8,27 +8,34 @@ module "eks" {
   cluster_name    = "${local.name}-eks"
   cluster_version = var.cluster_version
 
-  cluster_endpoint_public_access           = true
-  enable_cluster_creator_admin_permissions = true
+  cluster_endpoint_public_access = true
 
-  # Give the GitHub Actions deploy role Kubernetes admin via an EKS access entry.
-  # IAM AdministratorAccess does NOT grant in-cluster RBAC, so without this the
-  # app pipeline's `kubectl apply` is Unauthorized whenever Terraform was applied
-  # by a different identity (e.g. the local quickstart) than the pipeline role.
-  access_entries = var.create_github_oidc ? {
-    gha_deploy = {
-      principal_arn = aws_iam_role.gha_deploy[0].arn
-      policy_associations = {
-        admin = {
-          # EKS cluster access policies live in the `eks` service namespace, not
-          # `iam` -- an arn:aws:iam::aws:policy/... value is rejected at apply time
-          # with InvalidParameterException. Verified via `aws eks list-access-policies`.
-          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = { type = "cluster" }
-        }
+  # Deliberately FALSE. This option grants cluster-admin to whichever identity
+  # happens to run `terraform apply`, which is non-deterministic when the same
+  # state is applied both locally and by CI: each apply tried to create a
+  # "cluster_creator" access entry for a different principal, and the second one
+  # failed with ResourceInUseException (409). Every admin is listed explicitly
+  # below instead, so the result is identical no matter who applies.
+  enable_cluster_creator_admin_permissions = false
+
+  # Kubernetes admin via EKS access entries. IAM AdministratorAccess does NOT
+  # grant in-cluster RBAC, so without these `kubectl` is Unauthorized -- for the
+  # app pipeline's deploy and for local operators alike.
+  access_entries = merge(
+    var.create_github_oidc ? {
+      gha_deploy = {
+        principal_arn       = aws_iam_role.gha_deploy[0].arn
+        policy_associations = local.eks_cluster_admin_association
       }
-    }
-  } : {}
+    } : {},
+    {
+      for arn in var.cluster_admin_principal_arns :
+      "admin_${md5(arn)}" => {
+        principal_arn       = arn
+        policy_associations = local.eks_cluster_admin_association
+      }
+    },
+  )
 
   # Control-plane audit logging -> CloudWatch Logs.
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]

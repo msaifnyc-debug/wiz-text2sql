@@ -81,3 +81,13 @@ variable "github_repository_id" {
   type        = string
   default     = ""
 }
+
+# Principals (IAM user/role ARNs) granted Kubernetes cluster-admin via EKS access
+# entries. Listed explicitly rather than relying on
+# enable_cluster_creator_admin_permissions, which depends on who runs apply and
+# therefore differs between a local apply and a CI apply.
+variable "cluster_admin_principal_arns" {
+  description = "IAM principal ARNs to grant EKS cluster-admin via access entries."
+  type        = list(string)
+  default     = []
+}

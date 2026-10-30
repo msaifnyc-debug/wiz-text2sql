@@ -37,3 +37,6 @@ app/uploads/
 .idea/
 .vscode/
 *.swp
+
+# Shared non-secret exercise config is committed on purpose (see the file header).
+!infra/exercise.auto.tfvars
