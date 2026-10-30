@@ -65,3 +65,19 @@ variable "create_github_oidc" {
   type        = bool
   default     = true
 }
+
+# Numeric GitHub owner/repository IDs, used to match GitHub's immutable OIDC
+# subject claim (repo:<owner>@<owner_id>/<repo>@<repo_id>:...). Look them up with:
+#   gh api repos/<owner>/<repo> --jq '{repo_id:.id, owner_id:.owner.id}'
+# Leave empty to trust only the legacy name-only subject shape.
+variable "github_owner_id" {
+  description = "Numeric GitHub owner (user/org) ID for the immutable OIDC subject claim."
+  type        = string
+  default     = ""
+}
+
+variable "github_repository_id" {
+  description = "Numeric GitHub repository ID for the immutable OIDC subject claim."
+  type        = string
+  default     = ""
+}

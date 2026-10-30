@@ -45,6 +45,17 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 }
 
+locals {
+  # Accepted GitHub Actions OIDC subject shapes for this repo. The ID-bearing
+  # pattern is only added when both IDs are supplied (see variables.tf for how
+  # to look them up).
+  gha_sub_patterns = compact([
+    "repo:${var.github_owner}/${var.github_repo}:*",
+    var.github_owner_id != "" && var.github_repository_id != "" ?
+    "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repository_id}:*" : "",
+  ])
+}
+
 data "aws_iam_policy_document" "gha_assume" {
   count = var.create_github_oidc ? 1 : 0
 
@@ -61,10 +72,19 @@ data "aws_iam_policy_document" "gha_assume" {
       values   = ["sts.amazonaws.com"]
     }
     # Scope the trust to THIS repo only.
+    #
+    # GitHub now issues *immutable* subject claims that embed numeric owner and
+    # repository IDs, e.g.
+    #   repo:msaifnyc-debug@301498252/wiz-text2sql@1439201590:environment:production
+    # A name-only pattern ("repo:owner/repo:*") never matches that shape, so the
+    # assume fails with "Not authorized to perform sts:AssumeRoleWithWebIdentity".
+    # Trust both shapes; pinning the numeric IDs is strictly stronger than names
+    # because an ID survives a rename and cannot be impersonated by deleting the
+    # repo and recreating one with the same name.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_owner}/${var.github_repo}:*"]
+      values   = local.gha_sub_patterns
     }
   }
 }
