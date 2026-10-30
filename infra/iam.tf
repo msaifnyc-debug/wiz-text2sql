@@ -39,9 +39,21 @@ resource "aws_iam_openid_connect_provider" "github" {
 
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
+
+  # GitHub migrated this endpoint from DigiCert to Let's Encrypt, so the widely
+  # copy-pasted DigiCert thumbprints (6938fd4d..., 1c58a3a8...) no longer match
+  # anything in the live chain. AWS then cannot validate the token's signing
+  # chain and every assume fails with the misleading error "Not authorized to
+  # perform sts:AssumeRoleWithWebIdentity" -- even when sub and aud match.
+  #
+  # These are the Let's Encrypt intermediate (YR2) and ISRG root (Root YR)
+  # SHA-1 thumbprints. Re-derive with:
+  #   openssl s_client -servername token.actions.githubusercontent.com \
+  #     -showcerts -connect token.actions.githubusercontent.com:443 </dev/null \
+  #     | openssl x509 -fingerprint -sha1 -noout
   thumbprint_list = [
-    "6938fd4d98bab03faadb97b34396831e3780aea1",
-    "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
+    "2d74d6dfd96eea55ad7baafa0d3c6552b2dadc37",
+    "ab9d0263244dd0326eb67015705a667e79cfe998",
   ]
 }
 
