@@ -1,12 +1,15 @@
 # Build from the REPO ROOT so wizexercise.txt (root) and app/ + data/ are in context:
 #   docker build -f app/Dockerfile -t text2sql:dev .
 #
-# Base image is intentionally pinned to an older patch so the pipeline's image
-# scanner (Trivy) surfaces real CVEs - that is the shift-left demo, and the
-# "keeping up with security news" thread. Bump it to remediate on camera.
+# Base pinned to a current Debian 12 (bookworm) slim image. It previously sat on
+# 3.11.6-slim-bullseye (Debian 11) to surface CVEs for the shift-left demo, but
+# the pipeline's enforced Trivy gate correctly refused to deploy it: 8 fixable
+# CRITICALs in the Debian 11 layer plus CVE-2024-33663 in python-jose. Run
+# 40995097508 is the recorded evidence of that block; this is the remediation.
+# Python stays on 3.11 so no dependency behaviour changes with the base bump.
 
 # ---- builder: resolve dependencies into a venv -------------------------------
-FROM python:3.11.6-slim-bullseye AS build
+FROM python:3.11.18-slim-bookworm AS build
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends gcc \
@@ -17,7 +20,7 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install -r requirements.txt
 
 # ---- release: minimal runtime ------------------------------------------------
-FROM python:3.11.6-slim-bullseye AS release
+FROM python:3.11.18-slim-bookworm AS release
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
