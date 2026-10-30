@@ -26,6 +26,12 @@ jobs:
   # Required status check (see .github/branch-protection.json).
   iac-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to publish scanner SARIF to GitHub code scanning. Free on public
+      # repos, and it turns thousands of CI log lines into a browsable inventory
+      # of every flagged misconfiguration in the Security tab.
+      security-events: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -51,12 +57,24 @@ jobs:
           working_directory: infra
           soft_fail: true
 
+      # soft_fail is deliberate: the exercise REQUIRES these misconfigurations to
+      # ship, so the IaC scanners report rather than block. Enforcement lives in
+      # the app pipeline's Trivy gate, where the findings are not required.
       - name: checkov
         uses: bridgecrewio/checkov-action@1855a020a7bf7ca99917817796146c6fd5681230 # v12.2977.0
         with:
           directory: infra
           soft_fail: true
           framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+
+      - name: Publish checkov findings to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@0fda7a646fd14a20daf520829ca1ae8847000819 # codeql-bundle-v2.27.3
+        with:
+          sarif_file: results.sarif
+          category: checkov
 
   plan:
     if: github.event_name == 'pull_request'
