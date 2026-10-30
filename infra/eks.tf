@@ -20,7 +20,10 @@ module "eks" {
       principal_arn = aws_iam_role.gha_deploy[0].arn
       policy_associations = {
         admin = {
-          policy_arn   = "arn:aws:iam::aws:policy/AmazonEKSClusterAdminPolicy"
+          # EKS cluster access policies live in the `eks` service namespace, not
+          # `iam` -- an arn:aws:iam::aws:policy/... value is rejected at apply time
+          # with InvalidParameterException. Verified via `aws eks list-access-policies`.
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
           access_scope = { type = "cluster" }
         }
       }
