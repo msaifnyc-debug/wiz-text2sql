@@ -10,6 +10,16 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    # Uploaded .db files live on each pod's emptyDir, so with 2 replicas an
+    # upload and the follow-up query can land on different pods and /api/ask
+    # fails with "the selected database file is missing on the server".
+    # Session affinity pins a user to one pod, which keeps both replicas (and
+    # the rolling-update story) while making the flow correct.
+    #
+    # This is a MITIGATION, not the fix: a pod restart still loses that user's
+    # upload. The correct design is shared storage for the uploads -- S3, EFS,
+    # or storing the blob in MongoDB (GridFS) and materialising it per pod.
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=86400
 spec:
   ingressClassName: alb
   rules:
