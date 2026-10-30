@@ -19,4 +19,13 @@ provider "aws" {
   default_tags {
     tags = local.tags
   }
+
+  # The CloudLabs lab platform tags every resource with "aws-apn-id" for partner
+  # billing attribution. That tag is not declared here, so Terraform proposes
+  # removing it on every plan -- and the platform re-adds it, producing permanent
+  # drift that has nothing to do with this configuration. Ignore it so `plan`
+  # reflects real differences only.
+  ignore_tags {
+    keys = ["aws-apn-id"]
+  }
 }

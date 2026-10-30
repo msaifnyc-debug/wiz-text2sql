@@ -40,6 +40,16 @@ module "eks" {
   # Control-plane audit logging -> CloudWatch Logs.
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
+  # Same caller-dependence problem as enable_cluster_creator_admin_permissions:
+  # this defaults to whoever runs `terraform apply`, so the secrets-encryption KMS
+  # key policy named the lab user after a local apply and the GitHub Actions role
+  # after a CI apply, each run reverting the other. List the administrators
+  # explicitly so the policy is identical regardless of who applies.
+  kms_key_administrators = concat(
+    var.create_github_oidc ? [aws_iam_role.gha_deploy[0].arn] : [],
+    var.cluster_admin_principal_arns,
+  )
+
   vpc_id                   = module.vpc.vpc_id
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.private_subnets
