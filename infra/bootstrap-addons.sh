@@ -30,10 +30,17 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
   --set region="${REGION}" \
   --set vpcId="${VPC_ID}"
 
+# The controller registers a mutating webhook for ALL Services, so until its pods
+# are serving, any subsequent Service create fails with "no endpoints available
+# for service aws-load-balancer-webhook-service" -- which breaks the Kyverno
+# install below. Wait for the rollout before continuing.
+echo ">> Waiting for the load balancer controller webhook to serve..."
+kubectl -n kube-system rollout status deploy/aws-load-balancer-controller --timeout=300s
+
 echo ">> Kyverno + preventative policy..."
 helm repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null 2>&1 || true
 helm repo update >/dev/null
-helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace
+helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace --wait --timeout 10m
 kubectl apply -f ../security/kyverno/
 
 echo ">> Done. Add-ons installed."
