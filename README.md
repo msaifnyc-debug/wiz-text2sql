@@ -65,7 +65,7 @@ flowchart TB
 │   ├── kyverno/         # preventative admission control (enforce mode)
 │   └── attack-simulation/  # scripts that trip the detective controls
 ├── .github/workflows/   # infra.yml (IaC pipeline) + app.yml (build/scan/deploy pipeline)
-├── docs/                # demo script, concepts cheat-sheet, slide outline, architecture notes
+├── docs/                # design notes: decisions, attack path, requirements, scanner findings
 └── wizexercise.txt      # baked into the image
 ```
 
@@ -82,8 +82,8 @@ flowchart TB
 - **Container runs as cluster-admin** -> Kyverno preventative policy demonstrates
   blocking the *class* of risk on new workloads; RBAC review in the demo.
 
-See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for the full walkthrough and
-[`docs/CONCEPTS.md`](docs/CONCEPTS.md) for the concepts cheat-sheet.
+See [`docs/OVERVIEW.md`](docs/OVERVIEW.md) for the design decisions, attack path,
+requirements mapping and scanner findings.
 
 ## Quick start (local)
 
@@ -115,7 +115,7 @@ APP_SECRET_KEY=$(openssl rand -hex 32) FIREWORKS_API_KEY=fw_... \
 kubectl -n text2sql exec deploy/text2sql -- cat /app/wizexercise.txt   # prove the name file
 ```
 
-Full walkthrough: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
+Design notes: [`docs/OVERVIEW.md`](docs/OVERVIEW.md).
 
 > This environment is intentionally insecure for a security exercise. Do not deploy it
 > in a production account or leave it running. Tear down with `terraform destroy`.

@@ -27,7 +27,7 @@ Automated rows run in CI on every PR; the rest are scripted in `attack-simulatio
 | Hardcoded secret committed | Build fails | Gitleaks (enforced) + push protection |
 | Fixable CRITICAL image CVE | Build fails | Trivy gate (enforced) |
 | HIGH/CRITICAL image CVEs | Reported, visible | Trivy report step |
-| Insecure Terraform (public bucket, open SSH, admin role) | Flagged pre-deploy | tfsec + checkov (soft-fail; see SHIFT_LEFT_FINDINGS.md) |
+| Insecure Terraform (public bucket, open SSH, admin role) | Flagged pre-deploy | tfsec + checkov (soft-fail; see docs/OVERVIEW.md) |
 | Python code smells / injection patterns | Reported | Semgrep (advisory) |
 | Image provenance | `wizexercise.txt` printed from the image, then from the running pod | build + post-deploy exec |
 | Unpinned action / stale dep | PR raised | SHA pins + Dependabot |
