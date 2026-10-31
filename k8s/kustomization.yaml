@@ -8,8 +8,8 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-  # secret.example.yaml is intentionally NOT included; scripts/deploy-app.sh
-  # creates the real Secret from env vars.
+  # The Secret is intentionally not a file here; scripts/deploy-app.sh creates it
+  # at deploy time from MONGODB_URI / APP_SECRET_KEY / FIREWORKS_API_KEY.
 
 # Placeholder only: scripts/deploy-app.sh swaps in <ecr-url>@<digest> before
 # apply, because Kyverno rejects any non-ECR image in this namespace.
