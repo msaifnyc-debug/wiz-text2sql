@@ -40,3 +40,6 @@ app/uploads/
 
 # Shared non-secret exercise config is committed on purpose (see the file header).
 !infra/exercise.auto.tfvars
+
+# Local uv lockfile; requirements.txt is the pinned source of truth for the image.
+uv.lock
