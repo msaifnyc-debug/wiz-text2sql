@@ -1,6 +1,6 @@
 # Pinned for reproducible image builds and so Dependabot/SCA can track them.
 # web
-fastapi==0.111.0
+fastapi==0.162.0
 uvicorn[standard]==0.30.1
 pydantic==2.7.1
 email-validator==2.1.1
