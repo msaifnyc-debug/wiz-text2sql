@@ -43,3 +43,6 @@ app/uploads/
 
 # Local uv lockfile; requirements.txt is the pinned source of truth for the image.
 uv.lock
+
+# Editor workspace files
+*.code-workspace
