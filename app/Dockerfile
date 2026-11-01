@@ -1,4 +1,4 @@
-# Build from the REPO ROOT so wizexercise.txt (root) and app/ + data/ are in context:
+# Build from the REPO ROOT so wizexercise.txt (root) and app/ are both in context:
 #   docker build -f app/Dockerfile -t text2sql:dev .
 #
 # Base pinned to a current Debian 12 (bookworm) slim image. It previously sat on
@@ -34,7 +34,6 @@ RUN useradd --system --uid 10001 --no-create-home appuser
 COPY --from=build /opt/venv /opt/venv
 COPY app/src ./src
 COPY app/web ./web
-COPY data ./data
 COPY wizexercise.txt /app/wizexercise.txt
 
 RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads

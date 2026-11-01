@@ -46,3 +46,6 @@ uv.lock
 
 # Editor workspace files
 *.code-workspace
+
+# Sample database kept locally for demos; the product is "upload your own".
+data/

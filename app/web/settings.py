@@ -39,4 +39,3 @@ QUERY_TIMEOUT_S = float(os.getenv("QUERY_TIMEOUT_S", "5"))
 HISTORY_TURNS = int(os.getenv("HISTORY_TURNS", "4"))
 
 # Convenience: a bundled sample DB users can try immediately.
-SAMPLE_DB_PATH = os.getenv("SAMPLE_DB_PATH", "data/Chinook.db")
