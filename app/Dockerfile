@@ -9,7 +9,7 @@
 # Python stays on 3.11 so no dependency behaviour changes with the base bump.
 
 # ---- builder: resolve dependencies into a venv -------------------------------
-FROM python:3.11.18-slim-bookworm AS build
+FROM python:3.15.0-slim-bookworm AS build
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends gcc \
@@ -20,7 +20,7 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install -r requirements.txt
 
 # ---- release: minimal runtime ------------------------------------------------
-FROM python:3.11.18-slim-bookworm AS release
+FROM python:3.15.0-slim-bookworm AS release
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
