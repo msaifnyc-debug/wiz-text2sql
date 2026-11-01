@@ -15,26 +15,12 @@ function esc(v) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-async function loadDbs(selectId) {
-  const res = await api("/api/dbs");
-  const { databases } = await res.json();
-  const sel = el("db-select");
-  sel.innerHTML = "";
-  if (!databases.length) {
-    const o = document.createElement("option");
-    o.textContent = "Upload a .db to begin";
-    o.value = "";
-    sel.appendChild(o);
-    return;
-  }
-  for (const d of databases) {
-    const o = document.createElement("option");
-    o.value = d.db_id;
-    o.textContent = `${d.filename} (${d.tables.length} tables)`;
-    sel.appendChild(o);
-  }
-  if (selectId) sel.value = selectId;
-}
+// The active database for this browser session. Deliberately NOT restored from
+// /api/dbs on load: that endpoint lists the MongoDB registry, but the uploaded
+// .db files live on the serving pod's emptyDir, so any redeploy or pod restart
+// leaves registry rows whose files no longer exist. Offering those back would
+// show databases that aren't really there and fail on the first question.
+let activeDbId = null;
 
 el("file").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -46,7 +32,7 @@ el("file").addEventListener("change", async (e) => {
   if (res.ok) {
     const d = await res.json();
     statusEl.textContent = `Loaded ${d.filename}: ${d.tables.join(", ")}`;
-    await loadDbs(d.db_id);
+    activeDbId = d.db_id;
   } else {
     const err = await res.json().catch(() => ({}));
     statusEl.textContent = `Upload rejected: ${err.detail || "invalid file"}`;
@@ -56,9 +42,9 @@ el("file").addEventListener("change", async (e) => {
 
 el("ask-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const db_id = el("db-select").value;
+  const db_id = activeDbId;
   const question = el("question").value.trim();
-  if (!db_id) { statusEl.textContent = "Upload and select a database first."; return; }
+  if (!db_id) { statusEl.textContent = "Upload a .db file to begin."; return; }
   if (!question) return;
 
   statusEl.textContent = "Thinking...";
@@ -136,5 +122,4 @@ el("logout").onclick = async () => {
   window.location.href = "/";
 };
 
-loadDbs();
 loadHistory();
