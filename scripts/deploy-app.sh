@@ -29,3 +29,17 @@ kubectl kustomize k8s/ \
   | kubectl apply -f -
 
 kubectl -n "$NS" rollout status deployment/text2sql --timeout=180s
+
+# Admission policies travel with the app so the preventative control is under
+# CI/CD rather than only applied by hand from infra/bootstrap-addons.sh.
+# Guarded on the CRD: on a freshly built cluster this script can run before
+# Kyverno is installed, and applying a ClusterPolicy without the CRD would fail
+# the whole deploy. They are deliberately NOT in kustomization.yaml for the
+# same reason.
+if kubectl get crd clusterpolicies.kyverno.io >/dev/null 2>&1; then
+  echo ">> Applying Kyverno admission policies..."
+  kubectl apply -f k8s/policies/
+else
+  echo ">> Kyverno not installed yet; skipping admission policies."
+  echo "   Run infra/bootstrap-addons.sh, then re-run this script."
+fi

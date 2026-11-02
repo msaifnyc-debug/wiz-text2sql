@@ -41,6 +41,6 @@ echo ">> Kyverno + preventative policy..."
 helm repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null 2>&1 || true
 helm repo update >/dev/null
 helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace --wait --timeout 10m
-kubectl apply -f ../security/kyverno/
+kubectl apply -f ../k8s/policies/
 
 echo ">> Done. Add-ons installed."

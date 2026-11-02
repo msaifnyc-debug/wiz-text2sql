@@ -52,21 +52,78 @@ flowchart TB
 
 ## Repository layout
 
+`⚠` marks the four files holding the intentional weaknesses.
+
 ```
-.
-├── app/                 # Text-to-SQL web app (FastAPI) + reused agent (src/)
-│   ├── src/             # agent, schema grounding, read-only SQL guard, config, utils
-│   ├── web/             # FastAPI app: auth, mongo, upload hardening, UI
-│   ├── tests/           # unit + security test matrix
-│   └── Dockerfile       # multi-stage build; bakes in wizexercise.txt
-├── infra/               # Terraform: VPC, EKS, EC2 Mongo VM, S3, IAM, ECR, CloudTrail, Config, GuardDuty
-├── k8s/                 # Deployment, Service, Ingress, SA + cluster-admin binding, Secret template
-├── security/
-│   ├── kyverno/         # preventative admission control (enforce mode)
-│   └── attack-simulation/  # scripts that trip the detective controls
-├── .github/workflows/   # infra.yml (IaC pipeline) + app.yml (build/scan/deploy pipeline)
-├── docs/                # design notes: decisions, attack path, requirements, scanner findings
-└── wizexercise.txt      # baked into the image
+app/                       the application
+├── src/                   my original text-to-SQL agent, reused unchanged
+│   ├── agent.py           ask the model for SQL, run it, self-correct
+│   ├── schema.py          ground the prompt in the uploaded DB's real tables
+│   ├── checker.py         THE SQL GUARD - one read-only SELECT, nothing else
+│   ├── config.py          model choice, API key, failover
+│   └── utils.py           shared helpers
+├── web/                   the web layer I added
+│   ├── main.py            every route
+│   ├── mongo.py           MongoDB client: users, databases, history
+│   ├── auth.py            bcrypt hashing + JWT session cookie
+│   ├── storage.py         UPLOAD HARDENING - type, size, read-only, per-user
+│   ├── agent_service.py   bridges web to agent, saves each turn
+│   ├── settings.py        all config from environment variables
+│   ├── templates/         login + console pages
+│   └── static/            css, js
+├── tests/                 21 tests proving the two guards above hold
+├── Dockerfile             two-stage build, non-root, bakes in wizexercise.txt
+└── requirements.txt       pinned dependency versions (the source of truth)
+
+infra/                     Terraform - builds the cloud
+│   SETUP (no resources; configures Terraform itself)
+├── providers.tf           which cloud, which plugin versions
+├── backend.tf             where state is stored
+├── variables.tf           every adjustable setting
+├── locals.tf              computed names and tags
+├── outputs.tf             values printed after apply
+├── exercise.auto.tfvars   this deployment's settings (shared with CI)
+│   ENVIRONMENT
+├── vpc.tf                 3 AZs, public + private subnets, NAT, S3 endpoint
+├── eks.tf                 the cluster: private nodes, all audit logs
+├── ecr.tf                 container registry
+├── mongo_vm.tf         ⚠  the DB machine, its firewall, its IAM role
+├── user_data.sh.tpl    ⚠  what installs on the machine at first boot
+├── s3_backups.tf       ⚠  the public backup bucket
+├── iam.tf              ⚠  the admin VM role + the keyless CI role
+│   CONTROLS
+├── cloudtrail.tf          records every API call
+├── config.tf              3 detective rules
+├── guardduty.tf           threat detection
+└── bootstrap-addons.sh    post-apply: load balancer controller + Kyverno
+
+k8s/                       everything kubectl applies
+├── namespace.yaml         the text2sql namespace
+├── serviceaccount.yaml    the app's identity in the cluster
+├── clusterrolebinding.yaml   ⚠ binds that identity to cluster-admin
+├── deployment.yaml        2 pods, hardened, Mongo URI from a Secret
+├── service.yaml           stable internal address
+├── ingress.yaml           requests the internet-facing ALB
+├── kustomization.yaml     ties the manifests together
+└── policies/              PREVENTATIVE CONTROL (Kyverno, enforce mode)
+
+security/                  proving the controls work
+├── README.md              four-layer test matrix + demo order
+└── attack-simulation/     5 scripts, each mapped to the control that catches it
+
+.github/
+├── workflows/infra.yml    pipeline 1: scan the Terraform, then apply
+├── workflows/app.yml      pipeline 2: test, scan, build, deploy
+├── branch-protection.json required checks + code-owner review on main
+├── CODEOWNERS             who must review which folder
+└── dependabot.yml         weekly dependency and action updates
+
+scripts/
+├── deploy-app.sh          renders the image digest, creates the Secret, applies
+└── setup-github.sh        creates the repo with its security settings
+
+docs/OVERVIEW.md           design decisions, attack path, requirements, findings
+wizexercise.txt            my name - baked into the image
 ```
 
 ## Intentional weaknesses (required) and the control that catches each
