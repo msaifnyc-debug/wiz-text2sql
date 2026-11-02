@@ -9,7 +9,7 @@ detects or prevents it, so the whole build tells one attacker-vs-defender story.
 > Name file requirement: [`wizexercise.txt`](wizexercise.txt) is baked into the image
 > and validated in the running pod (see the demo script).
 
-## The product (not just a demo app)
+## The product
 
 An interactive **text-to-SQL** web app: a user signs up, **uploads a `.db` (SQLite)
 file**, and asks questions in natural language. The agent grounds every prompt in the
