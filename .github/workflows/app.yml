@@ -28,6 +28,10 @@ jobs:
   # Required status check (see .github/branch-protection.json).
   app-sast-and-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to publish the Kubernetes manifest scan to code scanning.
+      security-events: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -53,6 +57,34 @@ jobs:
         run: |
           pip install semgrep==1.90.0
           semgrep scan --config p/python --config p/security-audit app/
+
+      # The Terraform scanners in infra.yml are scoped to infra/, so until this
+      # step existed nothing scanned k8s/ at all -- the manifests were deployed
+      # by this pipeline but never inspected by it. Lives here rather than in
+      # infra.yml because this workflow is the one triggered by k8s/** changes.
+      #
+      # Worth knowing what this does and does not find: it flags the mounted
+      # ServiceAccount token (CKV_K8S_38), but it PASSES the cluster-admin
+      # ClusterRoleBinding, because Checkov resolves a binding's privileges by
+      # locating the ClusterRole definition among the scanned files and
+      # cluster-admin is built into Kubernetes, not declared here. That gap is
+      # why k8s/policies/disallow-cluster-admin-serviceaccounts.yaml exists:
+      # Kyverno runs inside the cluster and can resolve the name.
+      - name: Checkov - Kubernetes manifests (advisory)
+        uses: bridgecrewio/checkov-action@1855a020a7bf7ca99917817796146c6fd5681230 # v12.2977.0
+        with:
+          directory: k8s
+          soft_fail: true
+          framework: kubernetes
+          output_format: cli,sarif
+          output_file_path: console,k8s-results.sarif
+
+      - name: Publish Kubernetes findings to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@0fda7a646fd14a20daf520829ca1ae8847000819 # codeql-bundle-v2.27.3
+        with:
+          sarif_file: k8s-results.sarif
+          category: checkov-k8s
 
       - uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
