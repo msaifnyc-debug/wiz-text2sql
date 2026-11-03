@@ -88,12 +88,12 @@ at the end of the chain is my user table — emails and bcrypt password hashes.
 | DB on a VM, outdated version | `infra/mongo_vm.tf`, `user_data.sh.tpl` | `mongod --version` → 5.0.34 |
 | Outdated OS | Ubuntu 20.04 AMI | `lsb_release -d` |
 | SSH open to the internet | `mongo_vm.tf` SG | Config rule `restricted-ssh` |
-| Over-permissive VM role | `infra/iam.tf` | `03_imds_role_theft.sh` |
+| Over-permissive VM role | `infra/iam.tf` | `curl 169.254.169.254/latest/meta-data/iam/security-credentials/` → `AdministratorAccess` |
 | Mongo restricted to the cluster + auth | `mongo_vm.tf`, `user_data.sh.tpl` | unauthenticated query is refused |
 | Daily backup to object storage | `user_data.sh.tpl` cron | objects in the bucket |
 | Bucket public read + list | `infra/s3_backups.tf` | `aws s3 ls --no-sign-request` |
 | EKS nodes in private subnets | `infra/eks.tf` | `kubectl get nodes -o wide`, no public IPs |
-| Container has cluster-admin | `k8s/clusterrolebinding.yaml` | `04_pod_cluster_admin.sh` |
+| Container has cluster-admin | `k8s/clusterrolebinding.yaml` | `kubectl auth can-i --list --as=system:serviceaccount:text2sql:text2sql` → `*.*  [*]` |
 | Exposed via Ingress + cloud LB | `k8s/ingress.yaml` | the public ALB hostname |
 | Code in a VCS | GitHub | the repo |
 | Pipeline 1 — deploy IaC | `.github/workflows/infra.yml` | green run |

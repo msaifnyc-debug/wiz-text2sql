@@ -108,8 +108,7 @@ k8s/                       everything kubectl applies
 └── policies/              PREVENTATIVE CONTROL (Kyverno, enforce mode)
 
 security/                  proving the controls work
-├── README.md              four-layer test matrix + demo order
-└── attack-simulation/     5 scripts, each mapped to the control that catches it
+└── README.md              four-layer test matrix: each weakness and what catches it
 
 .github/
 ├── workflows/infra.yml    pipeline 1: scan the Terraform, then apply

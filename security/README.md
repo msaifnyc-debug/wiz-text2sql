@@ -1,7 +1,9 @@
 # Security controls and how I test them
 
-Four layers. The application and pipeline rows run automatically on every PR; the
-cloud and Kubernetes rows are exercised by the scripts in `attack-simulation/`.
+Four layers. The application and pipeline rows run automatically on every PR. The
+cloud and Kubernetes rows are exercised by hand against the live environment --
+the commands are short enough to run from the terminal and are listed inline
+below.
 
 ## Application layer — runs in CI (`cd app && pytest`)
 
@@ -29,14 +31,19 @@ cloud and Kubernetes rows are exercised by the scripts in `attack-simulation/`.
 | Image provenance | `wizexercise.txt` read from the image, then from the running pod | build + post-deploy exec |
 | A stale dependency or unpinned action | a PR is raised | SHA pins + Dependabot |
 
-## Cloud layer — `attack-simulation/`
+## Cloud layer — exercised by hand
 
-| # | Script | What it proves | What catches it |
-|---|---|---|---|
-| 01 | `01_public_bucket_access.sh` | anyone can list and download DB dumps with no AWS account | CloudTrail S3 data events; Config `s3-bucket-public-read-prohibited` |
-| 02 | `02_ssh_bruteforce.sh` | SSH is open to the internet | GuardDuty `SSHBruteForce`; Config `restricted-ssh` |
-| 03 | `03_imds_role_theft.sh` *(run on the VM)* | IMDSv1 + admin instance role = account takeover | CloudTrail; Config `ec2-imdsv2-check`; GuardDuty |
-| 04 | `04_pod_cluster_admin.sh` *(run in the pod)* | one internet-facing pod reads every secret cluster-wide | EKS control-plane audit logs |
+| Weakness | What it proves | What catches it |
+|---|---|---|
+| Public backup bucket | anyone can list and download DB dumps with no AWS account | CloudTrail S3 **data** events (bucket only -- not in console Event history); Config `s3-bucket-public-read-prohibited`; GuardDuty `BucketAnonymousAccessGranted` (sev 8.0) |
+| SSH open to `0.0.0.0/0` | the port is reachable from anywhere; key-only auth means guessing fails | GuardDuty `SSHBruteForce` -- **5 unsolicited findings from real hosts**; Config `restricted-ssh` |
+| IMDSv1 + `AdministratorAccess` instance role | a foothold on the VM becomes account takeover, and the MongoDB **root** password sits in a world-readable file and in the user-data | CloudTrail (the stolen role's calls carry the instance ID as the user name); Config `ec2-imdsv2-check` |
+| ServiceAccount bound to `cluster-admin` | one internet-facing pod reads every Secret cluster-wide and can borrow another pod's IRSA role | EKS control-plane audit logs; Kyverno `disallow-cluster-admin-serviceaccounts` (audit) |
+
+Caught by no scanner: the MongoDB root password. In the repo it is the expression
+`random_password.mongo_admin.result`; Terraform resolves it at apply time and
+writes the literal value onto the host, so it exists only in the running
+environment. Found by hand.
 
 ## Kubernetes layer — preventative
 
@@ -45,17 +52,18 @@ cloud and Kubernetes rows are exercised by the scripts in `attack-simulation/`.
 | Deploy a privileged or root pod | denied at admission | Kyverno `disallow-privileged-and-root` |
 | Deploy a non-ECR image into `text2sql` | denied at admission | Kyverno `restrict-image-registries` |
 | The real app pod | admitted | passes both policies |
+| A ServiceAccount bound to `cluster-admin` | reported, not blocked | Kyverno `disallow-cluster-admin-serviceaccounts` (**audit**, because the exercise requires the binding) |
 
-Exercise all three with `05_kyverno_prevention_demo.sh`.
+One command exercises the first two:
 
-## Demo order
+```bash
+kubectl -n text2sql run evil --image=nginx:latest --privileged   # denied
+kubectl get cpolr | awk 'NR==1 || $5>0'                          # 1 fail: the binding
+```
 
-The cloud controls are slow — GuardDuty takes 10-15 minutes and Config a few — so I
-run 01 through 04 about an hour before presenting and point at the aged findings.
+## Notes on timing
 
-1. **05 first.** Kyverno denies the bad pods instantly while the app keeps running.
-   It is the only control fast enough to demo truly live.
-2. **01**, then open AWS Config and show the bucket NON_COMPLIANT.
-3. **02**, then the GuardDuty finding.
-4. SSH in for **03**, then **04** from inside the pod, to walk the full path.
-5. Close on the correlation: one attack path, not five separate findings.
+The cloud controls are slow -- GuardDuty takes 10-15 minutes, Config a few, and
+CloudTrail data events lag 5-15 minutes before they are delivered. Kyverno is the
+only control fast enough to demonstrate truly live; everything else is better
+shown as an aged finding alongside the action that produced it.
