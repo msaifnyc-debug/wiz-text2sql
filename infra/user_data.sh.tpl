@@ -56,7 +56,12 @@ TS=$(date -u +%Y%m%dT%H%M%SZ)
 ARCHIVE="/tmp/mongo-$${TS}.archive.gz"
 mongodump --username admin --password '${admin_password}' --authenticationDatabase admin \
   --archive="$${ARCHIVE}" --gzip
-aws s3 cp "$${ARCHIVE}" "s3://${backup_bucket}/backups/mongo-$${TS}.archive.gz" --region ${region}
+# Absolute path on purpose: /etc/cron.d entries do NOT inherit the PATH set in
+# /etc/crontab, they get a minimal /usr/bin:/bin. The AWS CLI v2 installs to
+# /usr/local/bin/aws, so a bare `aws` here dumps the database successfully and
+# then dies on "aws: command not found" -- a silent backup failure that only
+# shows up as a missing object in S3.
+/usr/local/bin/aws s3 cp "$${ARCHIVE}" "s3://${backup_bucket}/backups/mongo-$${TS}.archive.gz" --region ${region}
 rm -f "$${ARCHIVE}"
 SCRIPT
 chmod +x /usr/local/bin/mongo-backup.sh
