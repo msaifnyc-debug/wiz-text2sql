@@ -79,6 +79,15 @@ jobs:
           output_format: cli,sarif
           output_file_path: console,k8s-results.sarif
 
+      # The action prefixes `directory` onto paths Checkov already emitted
+      # relative to that directory, so every result lands at k8s/k8s/... and
+      # GitHub cannot resolve it to a real file -- the alert opens with no
+      # source shown. Rewrite the prefix before uploading.
+      - name: Fix duplicated path prefix in the Kubernetes SARIF
+        if: always()
+        run: |
+          [ -f k8s-results.sarif ] && sed -i 's#k8s/k8s/#k8s/#g' k8s-results.sarif || true
+
       - name: Publish Kubernetes findings to code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@0fda7a646fd14a20daf520829ca1ae8847000819 # codeql-bundle-v2.27.3
