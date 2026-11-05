@@ -55,8 +55,30 @@ jobs:
       - name: Semgrep SAST (advisory)
         continue-on-error: true
         run: |
-          pip install semgrep==1.90.0
-          semgrep scan --config p/python --config p/security-audit app/
+          # setuptools pinned on purpose: semgrep 1.90.0 pulls in an old
+          # opentelemetry-instrumentation-requests that imports pkg_resources,
+          # which setuptools dropped in 81. Without the pin semgrep dies on
+          # import with ModuleNotFoundError before it reads a single file -- and
+          # because this step is advisory, the job stays GREEN and the scan
+          # silently never happens. That was the state of every run between
+          # 2026-10-30 and 2026-11-03.
+          pip install "setuptools<81" semgrep==1.90.0
+          semgrep scan --config p/python --config p/security-audit app/ \
+            --sarif --output semgrep.sarif
+          # Fail loudly if the scan produced nothing: an advisory step that
+          # crashes is worse than no step, because it still renders a checkmark.
+          test -s semgrep.sarif
+
+      # Deliberately NOT continue-on-error: the scan itself is advisory (a
+      # finding never blocks a deploy), but the scanner *running* is not. If
+      # semgrep crashes there is no SARIF to upload, this step fails, and the
+      # breakage is visible instead of hiding behind a green advisory step.
+      - name: Publish Semgrep findings to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@0fda7a646fd14a20daf520829ca1ae8847000819 # codeql-bundle-v2.27.3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
 
       # The Terraform scanners in infra.yml are scoped to infra/, so until this
       # step existed nothing scanned k8s/ at all -- the manifests were deployed
